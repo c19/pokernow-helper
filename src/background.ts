@@ -1,6 +1,10 @@
-function polling() {
-  // console.log("polling");
-  setTimeout(polling, 1000 * 30);
-}
+import { calc_winrate } from "poker-odds-calc";
 
-polling();
+chrome.runtime.onMessage.addListener(function (msg: any, sender, sendResponse) {
+  console.log(msg);
+  let action = msg.action;
+  let args = msg.args as { hand: [string, string], board: string[], seats: number, limit?: number };
+
+  const [winrate, tierate] = calc_winrate(args);
+  sendResponse([winrate, tierate]);
+});
