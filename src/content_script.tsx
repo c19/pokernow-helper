@@ -70,18 +70,25 @@ let dealer_index = -1;
 
 let [winrate, tierate] = [0, 0];
 
+function inplay(player: HTMLElement) {
+  let status = (player.querySelector(".table-player-status-icon") as HTMLElement)?.innerText;
+  let message = (player.querySelector(".player-hand-message") as HTMLElement)?.innerText;
+  return !(status?.includes("QUITTING") || status?.includes("AWAY") || message?.includes("AWAY"));
+}
+
 function update() {
   // my current bet
   let my_current_bet = (document.querySelector(".you-player .table-player-bet-value .normal-value") as HTMLElement)?.innerText;
   let my_name = (document.querySelector(".you-player .table-player-name") as HTMLElement)?.innerText;
 
-  let players = Array.from(document.querySelectorAll(".table-player")).map(player => ({
+  let players = (Array.from(document.querySelectorAll(".table-player")) as HTMLElement[]).map(player => ({
     name: (player.querySelector(".table-player-name") as HTMLElement).innerText,
     chips: parseInt((player.querySelector(".table-player-stack") as HTMLElement).innerText),
     hand: (Array.from(player.querySelectorAll(".card-container")) as HTMLElement[])
       .map(card => `${(card.innerText || '').replace(/\n/g, "").slice(0, -1).replace("10", "T")}`),
     self: player.classList.contains("you-player"),
-  }));
+    inplay: inplay(player),
+  })).filter(player => player.inplay);
 
   let self = players.filter(player => player.self)[0];
   let hand = self?.hand as [string, string];
