@@ -68,6 +68,8 @@ function setup() {
 let board_length = -1;
 let dealer_index = -1;
 
+let [winrate, tierate] = [0, 0];
+
 function update() {
   // my current bet
   let my_current_bet = (document.querySelector(".you-player .table-player-bet-value .normal-value") as HTMLElement)?.innerText;
@@ -94,9 +96,9 @@ function update() {
     board_length = board.length;
     dealer_index = dealer_;
     console.log(players, board);
-    chrome.runtime.sendMessage({ action: "calc_winrate", args: { hand, board, seats: players.length } }, (res) => {
+    chrome.runtime.sendMessage({ action: "calc_winrate", args: { hand, board, seats: players.length, limit: 500 } }, (res) => {
       console.log(res);
-      let [winrate, tierate] = res;
+      [winrate, tierate] = res;
       console.log(`${hand} on ${board} winrate ${winrate.toFixed(4)} tierate ${tierate.toFixed(4)}`);
       let bet = winrate * pot / (1 - winrate)
       console.log(`suggested bet ${bet}`);
@@ -108,4 +110,6 @@ function update() {
     // bet * (1 - winrate) = winrate * pot
     // bet = (winrate * pot)/(1 - winrate)
   }
+  let bet = winrate * pot / (1 - winrate)
+  console.log(`suggested bet ${bet}`);
 }
