@@ -22,9 +22,16 @@
       ]
     }
   ],
-  "background": {
-    "service_worker": "js/background.js"
-  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "poker-calc-wasm/*"
+      ],
+      "matches": [
+        "https://www.pokernow.club/*"
+      ]
+    }
+  ],
   "permissions": [
     "storage"
   ]

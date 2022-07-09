@@ -17,7 +17,6 @@
     "url": "https://github.com/chibat/chrome-extension-typescript-starter.git"
   },
   "dependencies": {
-    "poker-odds-calc": "file:../poker-odds-calc/",
     "react": "^17.0.1",
     "react-dom": "^17.0.1"
   },

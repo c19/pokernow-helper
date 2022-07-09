@@ -1,7 +1,3 @@
-chrome.runtime.onMessage.addListener(function (msg, sender, sendResponse) {
-  console.log(msg);
-});
-
 var callback = function (mutationsList: any, observer: any) {
   for (var mutation of mutationsList) {
 
@@ -63,6 +59,8 @@ function setup() {
   // Start observing the target node for configured mutations
   observer.observe(targetNode, config);
   // window.observer: any = observer;
+
+  get_wasm();
 }
 
 let board_length = -1;
@@ -74,6 +72,63 @@ function inplay(player: HTMLElement) {
   let status = (player.querySelector(".table-player-status-icon") as HTMLElement)?.innerText;
   let message = (player.querySelector(".player-hand-message") as HTMLElement)?.innerText;
   return !(status?.includes("QUITTING") || status?.includes("AWAY") || message?.includes("AWAY"));
+}
+
+const SYMBOLS = {
+  '2': 2, '3': 3, '4': 4, '5': 5, '6': 6, '7': 7, '8': 8, '9': 9, 'T': 10, 'J': 11, 'Q': 12, 'K': 13, 'A': 14,
+} as Record<string, number>;
+const SUITS = {
+  'd': 0, 'c': 1, 'h': 2, 's': 3,
+} as Record<string, number>;
+
+let wasm_calc: Function;
+
+function get_wasm() {
+  if (wasm_calc) {
+    return wasm_calc;
+  }
+  var importObject = {
+    env: {
+      now: function () {
+        return new Date().getTime();
+      },
+    }
+  };
+  var wasmPath = chrome.runtime.getURL("poker-calc-wasm/poker_calc_wasm_bg.wasm");
+  fetch(wasmPath).then(response =>
+    response.arrayBuffer()
+  ).then(bytes =>
+    WebAssembly.instantiate(bytes, importObject)
+  ).then(results => {
+    const calc = results.instance.exports.calc as Function;
+    wasm_calc = calc;
+  });
+  return wasm_calc;
+}
+
+function calc_winrate(hand: [string, string], board: string[], players: number) {
+  let calc = get_wasm();
+  const [c1, s1, c2, s2] = [SYMBOLS[hand[0][0]], SUITS[hand[0][1]], SYMBOLS[hand[1][0]], SUITS[hand[1][1]]];
+  let [c3, s3, c4, s4, c5, s5, c6, s6, c7, s7] = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
+  if (board.length >= 6) {
+    c3 = SYMBOLS[board[0][0]];
+    s3 = SUITS[board[0][1]];
+    c4 = SYMBOLS[board[1][0]];
+    s4 = SUITS[board[1][1]];
+    c5 = SYMBOLS[board[2][0]];
+    s5 = SUITS[board[2][1]];
+  }
+  if (board.length >= 8) {
+    c6 = SYMBOLS[board[3][0]];
+    s6 = SUITS[board[3][1]];
+  }
+  if (board.length == 10) {
+    c7 = SYMBOLS[board[4][0]];
+    s7 = SUITS[board[4][1]];
+  }
+  const result = calc(c1, s1, c2, s2, c3, s3, c4, s4, c5, s5, c6, s6, c7, s7, players, 1000000);
+  console.log(result);
+  return result;
 }
 
 function update() {
@@ -103,19 +158,15 @@ function update() {
     board_length = board.length;
     dealer_index = dealer_;
     console.log(players, board);
-    chrome.runtime.sendMessage({ action: "calc_winrate", args: { hand, board, seats: players.length, limit: 500 } }, (res) => {
-      console.log(res);
-      [winrate, tierate] = res;
-      console.log(`${hand} on ${board} winrate ${winrate.toFixed(4)} tierate ${tierate.toFixed(4)}`);
-      let bet = winrate * pot / (1 - winrate)
-      console.log(`suggested bet ${bet}`);
-    })
-    // const [winrate, tierate] = calc_winrate(hand, board, players.length);
+    winrate = calc_winrate(hand, board, players.length);
+    console.log(`${hand} on ${board} winrate ${winrate.toFixed(4)}`);
+    let bet = winrate * pot / (1 - winrate)
+    console.log(`suggested bet ${bet}`);
     // ev = winrate * (pot + bet) - bet
     // let ev = 0
     // bet = winrate * pot + winrate * bet
     // bet * (1 - winrate) = winrate * pot
-    // bet = (winrate * pot)/(1 - winrate)
+    // bet = (winrate * pot) / (1 - winrate)
   }
   let bet = winrate * pot / (1 - winrate)
   console.log(`suggested bet ${bet}`);
